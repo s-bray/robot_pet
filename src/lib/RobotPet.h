@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include <lib/FluxGarage_RoboEyes.h>
-#include "SoundPlayer.h"
+// #include "SoundPlayer.h" // Removed
 #include "IMUManager.h"
 #include "ServoManager.h"
 
@@ -13,7 +13,7 @@ class RobotPet
 private:
   Adafruit_SSD1306 &display;
   RoboEyes<Adafruit_SSD1306> roboEyes;
-  SoundPlayer &melody;
+  // SoundPlayer &melody; // Removed
   IMUManager &imu;
   ServoManager &servo;
 
@@ -214,8 +214,8 @@ private:
   }
 
 public:
-  RobotPet(Adafruit_SSD1306 &disp, SoundPlayer &buzzer, IMUManager &imuMgr, ServoManager &servoMgr, int width, int heigh, int delay)
-      : display(disp), roboEyes(disp), melody(buzzer), imu(imuMgr), servo(servoMgr),
+  RobotPet(Adafruit_SSD1306 &disp, IMUManager &imuMgr, ServoManager &servoMgr, int width, int heigh, int delay)
+      : display(disp), roboEyes(disp), imu(imuMgr), servo(servoMgr),
         screenWidth(width), screenHeight(heigh), refreshDelay(delay),
         currentEyeState(Default), lastActionTime(0), isRunning(false) {}
 
@@ -223,7 +223,7 @@ public:
   {
     imu.begin();
     servo.begin();
-    melody.play("G4 100 20 C5 100 20 E5 100 20 G5 100 20 C6 100 20 D6 100 20 E6 200 200");
+    // melody.play("G4 100 20 C5 100 20 E5 100 20 G5 100 20 C6 100 20 D6 100 20 E6 200 200"); // Removed
     roboEyes.begin(screenWidth, screenHeight, refreshDelay);
     setDefaultState();
 
@@ -270,16 +270,14 @@ public:
     if (currentEyeState != Dizzy && currentEyeState != Excited) {
        if (imu.isShaken()) {
          Serial.println(">>> SHAKEN DETECTED <<<");
-         enterDizzyState();
-         lastActionTime = millis();
-         melody.play("D6 50 10 D6 50 10 D6 50 10");
+          enterDizzyState();
+          lastActionTime = millis();
          return; // Skip rest of logic
        }
        if (imu.isPickedUp()) {
           Serial.println(">>> PICKUP DETECTED <<<");
-          enterExcitedState();
-          lastActionTime = millis();
-          melody.play("C6 100 20 E6 100 20");
+           enterExcitedState();
+           lastActionTime = millis();
           return; // Skip rest of logic
        }
     }

@@ -1,17 +1,17 @@
-#ifndef BUTTON_MANAGER_H
-#define BUTTON_MANAGER_H
+#ifndef TOUCH_MANAGER_H
+#define TOUCH_MANAGER_H
 
 #include <Arduino.h>
 #include <functional>
 #include <vector>
 
-class ButtonManager
+class TouchManager
 {
 private:
   int pin;
   bool lastState;
   unsigned long lastChangeTime;
-  unsigned long buttonDownTime;
+  unsigned long touchDownTime;
   int clickCount;
   bool longPressFired;
   bool longPressActive;
@@ -25,7 +25,7 @@ private:
   std::vector<std::function<void()>> longPressReleaseCallbacks;
 
 public:
-  ButtonManager(int pin);
+  TouchManager(int pin);
   void begin();
   void update();
 

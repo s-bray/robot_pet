@@ -1,37 +1,37 @@
-#include "ButtonManager.h"
+#include "TouchManager.h"
 
-ButtonManager::ButtonManager(int pin)
+TouchManager::TouchManager(int pin)
     : pin(pin),
       lastState(LOW),
       lastChangeTime(0),
-      buttonDownTime(0),
+      touchDownTime(0),
       clickCount(0),
       longPressFired(false),
       longPressActive(false)
 {
 }
 
-void ButtonManager::begin()
+void TouchManager::begin()
 {
-  pinMode(pin, INPUT_PULLUP);
+  pinMode(pin, INPUT);
 }
 
-void ButtonManager::addClickCallback(std::function<void(int)> cb)
+void TouchManager::addClickCallback(std::function<void(int)> cb)
 {
   clickCallbacks.push_back(cb);
 }
 
-void ButtonManager::addLongPressCallback(std::function<void()> cb)
+void TouchManager::addLongPressCallback(std::function<void()> cb)
 {
   longPressCallbacks.push_back(cb);
 }
 
-void ButtonManager::addLongPressReleaseCallback(std::function<void()> cb)
+void TouchManager::addLongPressReleaseCallback(std::function<void()> cb)
 {
   longPressReleaseCallbacks.push_back(cb);
 }
 
-void ButtonManager::update()
+void TouchManager::update()
 {
   bool reading = digitalRead(pin);
   unsigned long now = millis();
@@ -43,7 +43,7 @@ void ButtonManager::update()
 
     if (reading == HIGH)
     {
-      buttonDownTime = now;
+      touchDownTime = now;
       longPressFired = false;
       longPressActive = false;
     }
@@ -55,20 +55,20 @@ void ButtonManager::update()
     {
       onLongPressRelease();
       longPressActive = false;
-      buttonDownTime = 0;
+      touchDownTime = 0;
       return;
     }
 
-    if (buttonDownTime > 0 && !longPressFired)
+    if (touchDownTime > 0 && !longPressFired)
       clickCount++;
 
-    buttonDownTime = 0;
+    touchDownTime = 0;
   }
 
   if (reading == HIGH &&
-      buttonDownTime > 0 &&
+      touchDownTime > 0 &&
       !longPressFired &&
-      (now - buttonDownTime >= longPressTime))
+      (now - touchDownTime >= longPressTime))
   {
     longPressFired = true;
     longPressActive = true;
@@ -84,21 +84,21 @@ void ButtonManager::update()
   }
 }
 
-void ButtonManager::onClick(int count)
+void TouchManager::onClick(int count)
 {
   for (auto &cb : clickCallbacks)
     if (cb)
       cb(count);
 }
 
-void ButtonManager::onLongPress()
+void TouchManager::onLongPress()
 {
   for (auto &cb : longPressCallbacks)
     if (cb)
       cb();
 }
 
-void ButtonManager::onLongPressRelease()
+void TouchManager::onLongPressRelease()
 {
   for (auto &cb : longPressReleaseCallbacks)
     if (cb)
