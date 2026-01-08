@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include <lib/FluxGarage_RoboEyes.h>
-// #include "SoundPlayer.h" // Removed
 #include "IMUManager.h"
 #include "ServoManager.h"
 
@@ -13,7 +12,6 @@ class RobotPet
 private:
   Adafruit_SSD1306 &display;
   RoboEyes<Adafruit_SSD1306> roboEyes;
-  // SoundPlayer &melody; // Removed
   IMUManager &imu;
   ServoManager &servo;
 
@@ -223,7 +221,6 @@ public:
   {
     imu.begin();
     servo.begin();
-    // melody.play("G4 100 20 C5 100 20 E5 100 20 G5 100 20 C6 100 20 D6 100 20 E6 200 200"); // Removed
     roboEyes.begin(screenWidth, screenHeight, refreshDelay);
     setDefaultState();
 

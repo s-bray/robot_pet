@@ -256,7 +256,7 @@ void MenuManager::executeSelectedItem()
     if (item.action)
     {
       item.action();
-      drawMenu(); // Refresh untuk menampilkan state baru
+      drawMenu(); // Refresh to show new state
     }
     break;
 
@@ -265,7 +265,7 @@ void MenuManager::executeSelectedItem()
     break;
 
   case INFO:
-    // Info items tidak bisa diselect
+    // Info items cannot be selected
     break;
   }
 }
@@ -279,11 +279,11 @@ void MenuManager::enterSubmenu()
 
   if (item.type == SUBMENU && item.submenu && !item.submenu->empty())
   {
-    // Simpan menu dan title saat ini
+    // Save current menu and title
     menuStack.push_back(currentMenu);
     menuTitleStack.push_back(currentMenuTitle);
 
-    // Pindah ke submenu
+    // Switch to submenu
     currentMenu = item.submenu;
     currentMenuTitle = item.label;
     selectedIndex = 0;
@@ -304,7 +304,7 @@ void MenuManager::exitMenu()
   }
   else
   {
-    // Kembali ke menu sebelumnya
+    // Return to previous menu
     currentMenu = menuStack.back();
     menuStack.pop_back();
 

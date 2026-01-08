@@ -2,7 +2,6 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-// #include "lib/SoundPlayer.h" // Removed
 #include "lib/RobotPet.h"
 #include "lib/IMUManager.h"
 #include "lib/ServoManager.h"
@@ -22,7 +21,6 @@
 #define I2C_SDA_PIN 6
 #define I2C_SCL_PIN 7
 
-// #define BUZZER_PIN 8 // Removed
 #define TOUCH_PIN 10
 
 #define MOTOR_IN1 0
@@ -31,10 +29,8 @@
 #define MOTOR_IN4 3
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// MotorManager motor(MOTOR_IN1, MOTOR_IN2, MOTOR_IN3, MOTOR_IN4); // Removed
 IMUManager imu;
 ServoManager servo(0, 1); // Left=0, Right=1
-// SoundPlayer melody(BUZZER_PIN); // Removed
 TouchManager touch(TOUCH_PIN);
 BLEManager ble;
 RobotPet robotPet(display, imu, servo, SCREEN_WIDTH, SCREEN_HEIGHT, 100);
@@ -132,11 +128,10 @@ void setup()
   ble.setOnConnectCallback([]()
                            { 
     Serial.println("[BLE] Connected"); });
-    // melody.play("G4 100 20 C5 100 20 E5 100 20 G5 100 20 C6 100 20 D6 100 20 E6 200 200"); }); // Removed
+
   ble.setOnDisconnectCallback([]()
                               {
     Serial.println("[BLE] Disconnected");
-      // melody.play("E6 100 20 D6 100 20 C6 120 40 G5 150 100"); // Removed
     
     if (currentState != Menu) {
       switchState(Animation);
@@ -172,11 +167,11 @@ void setupMenu()
     Serial.println(state ? "ON" : "OFF");
     if (state) {
       ble.turnOn();
-      // melody.play("C5 100 20 E5 100 20 G5 150 20"); // Removed
+      
       configManager.saveSettingsConfig("bluetooth", true);
     } else {
       ble.turnOff();
-      // melody.play("G5 100 20 E5 100 20 C5 150 20"); // Removed
+      
       configManager.saveSettingsConfig("bluetooth", false);
     } });
 
@@ -186,7 +181,7 @@ void setupMenu()
     ble.turnOff();
     delay(500);
     ble.turnOn();
-    // melody.play("C5 100 20 G5 100 20"); // Removed
+    
  });
 
   menu.addInfoToSubmenu(bluetoothMenu, "Status", []()
@@ -197,17 +192,11 @@ void setupMenu()
                           {
     Serial.print("[WiFi] Turned ");
     Serial.println(state ? "ON" : "OFF");
-   
-      if (state) {
-        // melody.play("C5 100 20 E5 100 20"); // Removed
-      } else {
-        // melody.play("E5 100 20 C5 100 20"); // Removed
-      } });
+  });
 
   menu.addActionToSubmenu(wifiMenu, "Scan Networks", []()
                           {
     Serial.println("[WiFi] Scanning...");
-    //  melody.play("C5 50 10 E5 50 10 G5 50 10"); // Removed
  });
 
   menu.addInfoToSubmenu(wifiMenu, "Status", []()
@@ -221,7 +210,6 @@ void setupMenu()
   menu.addItem("Exit", ACTION, []()
                {
     Serial.println("[Menu] Exiting...");
-    // melody.play("G5 100 20 E5 100 20 C5 150 20"); // Removed
     menu.hide();
     switchState(Animation); });
 }
@@ -362,7 +350,6 @@ void handleBLEMessage(String message)
     }
 
     notification.show(doc);
-    // melody.play("C6 120 40 E6 120 40 G6 200 100"); // Removed
     return;
   }
 

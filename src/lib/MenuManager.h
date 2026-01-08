@@ -7,20 +7,20 @@
 
 enum MenuItemType
 {
-  ACTION,  // Item yang bisa dipilih untuk eksekusi aksi
+  ACTION,  // Item that can be selected to execute action
   TOGGLE,  // Item on/off
-  SUBMENU, // Item yang membuka submenu
-  INFO     // Item hanya untuk menampilkan info
+  SUBMENU, // Item that opens a submenu
+  INFO     // Item detailing info only
 };
 
 struct MenuItem
 {
   String label;
   MenuItemType type;
-  bool *toggleState;                // Pointer ke boolean untuk TOGGLE
-  std::function<void()> action;     // Callback untuk ACTION
-  std::vector<MenuItem> *submenu;   // Pointer ke submenu items
-  std::function<String()> getValue; // Callback untuk mendapatkan nilai dinamis (untuk INFO)
+  bool *toggleState;                // Pointer to boolean for TOGGLE
+  std::function<void()> action;     // Callback for ACTION
+  std::vector<MenuItem> *submenu;   // Pointer to submenu items
+  std::function<String()> getValue; // Callback to get dynamic value (for INFO)
 
   MenuItem(String lbl, MenuItemType t = ACTION)
       : label(lbl), type(t), toggleState(nullptr), action(nullptr), submenu(nullptr), getValue(nullptr) {}
@@ -32,8 +32,8 @@ private:
   Adafruit_SSD1306 &display;
   std::vector<MenuItem> mainMenu;
   std::vector<MenuItem> *currentMenu;
-  std::vector<std::vector<MenuItem> *> menuStack; // Stack untuk navigasi menu
-  std::vector<String> menuTitleStack;             // Stack untuk title menu
+  std::vector<std::vector<MenuItem> *> menuStack; // Stack for menu navigation
+  std::vector<String> menuTitleStack;             // Stack for menu titles
 
   int selectedIndex;
   int scrollOffset;
@@ -59,30 +59,30 @@ public:
 
   void begin();
 
-  // Fungsi untuk menambahkan item ke main menu
+  // Function to add item to main menu
   void addItem(const MenuItem &item);
   void addItem(String label, MenuItemType type, std::function<void()> callback);
   void addToggleItem(String label, bool *toggleState, std::function<void(bool)> callback = nullptr);
   void addSubmenu(String label, std::vector<MenuItem> *submenu);
   void addInfoItem(String label, std::function<String()> getValue);
 
-  // Fungsi untuk navigasi menu
+  // Function for menu navigation
   void show();
   void hide();
   void update();
   void navigateDown();
   void navigateUp();
   void selectItem();
-  void back(); // Fungsi untuk kembali ke menu sebelumnya
+  void back(); // Function to return to previous menu
 
   bool isMenuActive() { return isActive; }
   void setMenuTitle(String title) { currentMenuTitle = title; }
 
-  // Helper untuk membuat dan mengisi submenu
+  // Helper to create and populate submenu
   std::vector<MenuItem> *createSubmenu();
   void addItemToSubmenu(std::vector<MenuItem> *submenu, const MenuItem &item);
 
-  // Helper khusus untuk menambahkan berbagai tipe item ke submenu
+  // Special helper to add various item types to submenu
   void addActionToSubmenu(std::vector<MenuItem> *submenu, String label, std::function<void()> callback);
   void addToggleToSubmenu(std::vector<MenuItem> *submenu, String label, bool *toggleState, std::function<void(bool)> callback = nullptr);
   void addSubmenuToSubmenu(std::vector<MenuItem> *parentSubmenu, String label, std::vector<MenuItem> *childSubmenu);
