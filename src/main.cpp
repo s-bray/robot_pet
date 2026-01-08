@@ -4,7 +4,8 @@
 #include <Adafruit_SSD1306.h>
 #include "lib/SoundPlayer.h"
 #include "lib/RobotPet.h"
-#include "lib/MotorManager.h"
+#include "lib/IMUManager.h"
+#include "lib/ServoManager.h"
 #include "lib/ButtonManager.h"
 #include "lib/BLEManager.h"
 #include "lib/MediaVisualizer.h"
@@ -30,11 +31,13 @@
 #define MOTOR_IN4 3
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-MotorManager motor(MOTOR_IN1, MOTOR_IN2, MOTOR_IN3, MOTOR_IN4);
+// MotorManager motor(MOTOR_IN1, MOTOR_IN2, MOTOR_IN3, MOTOR_IN4); // Removed
+IMUManager imu;
+ServoManager servo(0, 1); // Left=0, Right=1
 SoundPlayer melody(BUZZER_PIN);
 ButtonManager button(BUTTON_PIN);
 BLEManager ble;
-RobotPet robotPet(display, melody, motor, SCREEN_WIDTH, SCREEN_HEIGHT, 100);
+RobotPet robotPet(display, melody, imu, servo, SCREEN_WIDTH, SCREEN_HEIGHT, 100);
 MediaVisualizer visualizer(display, FPS_30);
 NotificationManager notification(display, 15000);
 MenuManager menu(display);
