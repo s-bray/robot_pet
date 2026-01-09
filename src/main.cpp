@@ -18,10 +18,10 @@
 #define OLED_RESET -1
 #define SCREEN_ADDRESS 0x3C
 
-#define I2C_SDA_PIN 6
-#define I2C_SCL_PIN 7
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
 
-#define TOUCH_PIN 10
+#define TOUCH_PIN 15
 
 #define MOTOR_IN1 0
 #define MOTOR_IN2 1
@@ -30,7 +30,7 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 IMUManager imu;
-ServoManager servo(0, 1); // Left=0, Right=1
+ServoManager servo(18, 19); // Left=18, Right=19
 TouchManager touch(TOUCH_PIN);
 BLEManager ble;
 RobotPet robotPet(display, imu, servo, SCREEN_WIDTH, SCREEN_HEIGHT, 100);
