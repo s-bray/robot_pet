@@ -29,6 +29,10 @@ void IMUManager::update()
 {
   if (!isConnected) return;
 
+  unsigned long now = millis();
+  if (now - lastUpdate < UPDATE_INTERVAL) return;
+  lastUpdate = now;
+
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
@@ -83,6 +87,6 @@ bool IMUManager::isPickedUp()
   for (int i=0; i<SAMPLE_SIZE; i++) avgGyro += gyroHistory[i];
   avgGyro /= SAMPLE_SIZE;
 
-  // It is picked up if it's moving (Variance > 2.0) but NOT being shaken violently (Gyro < 4.0)
-  return (accelVariance > 2.0 && avgGyro < 4.0);
+  // It is picked up if it's moving (Variance > Threshold) but NOT being shaken violently
+  return (accelVariance > PICKUP_THRESHOLD && avgGyro < (SHAKE_THRESHOLD / 2.0));
 }

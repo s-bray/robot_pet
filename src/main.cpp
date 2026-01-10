@@ -13,22 +13,25 @@
 #include "lib/ConfigManager.h"
 #include <ArduinoJson.h>
 
+// SPI OLED DEFINITIONS
+#define OLED_MOSI   33 // SDA
+#define OLED_CLK    32 // SCK
+#define OLED_DC     26
+#define OLED_CS     27
+#define OLED_RESET  25
+
 #define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-#define OLED_RESET -1
-#define SCREEN_ADDRESS 0x3C
+#define SCREEN_HEIGHT 32 // Confirmed 32px height
+//#define SCREEN_ADDRESS 0x3C // Not used for SPI
 
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
 
 #define TOUCH_PIN 15
 
-#define MOTOR_IN1 0
-#define MOTOR_IN2 1
-#define MOTOR_IN3 2
-#define MOTOR_IN4 3
-
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// Software SPI Constructor
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
+  OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 IMUManager imu;
 ServoManager servo(18, 19); // Left=18, Right=19
 TouchManager touch(TOUCH_PIN);
@@ -62,19 +65,23 @@ void scanI2C();
 void switchState(CurrentState newState);
 void updateCurrentState();
 void setupMenu();
+void runDiagnostics();
 
 void setup()
 {
   Serial.begin(115200);
 
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-  Wire.setClock(100000);
+  Wire.setClock(50000); // Lower speed for stability
   scanI2C();
 
   SettingConfig settingConfig = configManager.loadSettingsConfig();
 
   bluetoothEnabled = settingConfig.bluetooth;
   wifiEnabled = settingConfig.wifi;
+
+  // Diagnostics moved to end of setup
+
 
   touch.begin();
   touch.addClickCallback([](int count)
@@ -110,11 +117,13 @@ void setup()
                                      { 
     if (currentState == Animation) robotPet.longClickRelease(); });
 
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  // Initialize SPI Display
+  // Note: SPI display doesn't have an address like 0x3C
+  if (!display.begin(SSD1306_SWITCHCAPVCC))
   {
-    Serial.println("[Display] Failed!");
-    while (1)
-      ;
+      Serial.println("[Display] SPI Allocation Failed");
+  } else {
+      Serial.println("[Display] SPI Initialized");
   }
 
   robotPet.begin();
@@ -148,8 +157,11 @@ void setup()
     ble.turnOff();
   }
 
-  display.clearDisplay();
   display.display();
+
+  Serial.println("--- STARTUP DIAGNOSTICS ---");
+  runDiagnostics();
+  Serial.println("--- END DIAGNOSTICS ---");
 
   robotPet.start();
 }
@@ -382,4 +394,34 @@ void handleBLEMessage(String message)
 
     return;
   }
+}
+
+void runDiagnostics() {
+    Serial.println("[DIAG] Testing Servos (Wiggle)...");
+    servo.startWiggle();
+    unsigned long start = millis();
+    while(millis() - start < 1000) {
+        servo.update();
+        delay(10);
+    }
+    servo.stop();
+    Serial.println("[DIAG] Servo test complete.");
+
+    Serial.println("[DIAG] checking Touch...");
+    int touchVal = digitalRead(TOUCH_PIN);
+    Serial.printf("[DIAG] Touch Pin (%d) Value: %d\n", TOUCH_PIN, touchVal);
+
+    Serial.println("[DIAG] Checking I2C Devices Again...");
+    scanI2C();
+
+    Serial.println("[DIAG] Drawing Test Pattern...");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0,0);
+    display.println("DIAGNOSTIC");
+    display.println("TEST MODE");
+    display.drawRect(10, 20, 50, 20, SSD1306_WHITE);
+    display.display();
+    delay(2000); // Keep it on screen for 2 seconds
 }

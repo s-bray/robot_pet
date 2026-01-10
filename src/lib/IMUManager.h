@@ -16,14 +16,17 @@ private:
   float totalAccel;
   float totalGyro;
 
-  static constexpr float SHAKE_THRESHOLD = 8.0f; // rad/s (approx)
-  static constexpr float PICKUP_THRESHOLD = 1.0f; // Normalized acceleration variance
+  static constexpr float SHAKE_THRESHOLD = 5.0f; // Lowered from 8.0 for easier detection
+  static constexpr float PICKUP_THRESHOLD = 2.0f; // Increased to reduce false positives
 
   // Activity average tracking
   static const int SAMPLE_SIZE = 10;
   float gyroHistory[SAMPLE_SIZE];
   float accelHistory[SAMPLE_SIZE];
   int historyIndex = 0;
+  
+  unsigned long lastUpdate = 0;
+  static const int UPDATE_INTERVAL = 20; // Increased rate for better shake detection
 
   bool isConnected = false;
 

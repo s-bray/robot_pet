@@ -18,10 +18,12 @@ private:
   
   static const int CENTER_POS = 90;
   static const int WIGGLE_RANGE = 30; // +/- degrees
-  static const int WIGGLE_SPEED = 100; // ms per step
+  
+  int wiggleSpeed; 
 
 public:
   ServoManager(int leftPin, int rightPin);
+  void setWiggleSpeed(int ms);
   void begin();
   void update();
   void startWiggle();

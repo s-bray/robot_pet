@@ -1,10 +1,15 @@
 #include "ServoManager.h"
 
 ServoManager::ServoManager(int leftPin, int rightPin)
-    : pinLeft(leftPin), pinRight(rightPin), isWiggling(false), lastUpdate(0), wiggleStep(0) {}
+    : pinLeft(leftPin), pinRight(rightPin), isWiggling(false), lastUpdate(0), wiggleStep(0), wiggleSpeed(200) {}
+
+void ServoManager::setWiggleSpeed(int ms) {
+    if (ms > 0) wiggleSpeed = ms;
+}
 
 void ServoManager::begin()
 {
+  // ... (rest of begin)
   // Allocate timers for ESP32 servos
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
@@ -20,7 +25,7 @@ void ServoManager::update()
   if (!isWiggling) return;
 
   unsigned long now = millis();
-  if (now - lastUpdate >= WIGGLE_SPEED) {
+  if (now - lastUpdate >= wiggleSpeed) {
     lastUpdate = now;
     wiggleStep++;
     

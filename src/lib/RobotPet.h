@@ -30,7 +30,8 @@ private:
     Asleep,
     Angry,
     Excited,
-    Dizzy
+    Dizzy,
+    Touched
   } currentEyeState;
 
   static const unsigned long IDLE_DELAY = 5000;
@@ -42,14 +43,17 @@ private:
   static const unsigned long SCARED_DURATION = 2000;
   static const unsigned long EXCITED_DURATION = 3000;
   static const unsigned long DIZZY_DURATION = 4000;
+  static const unsigned long TOUCHED_DURATION = 3000;
+  static const unsigned long PICKUP_COOLDOWN = 5000;
 
   unsigned long lastActionTime;
+  unsigned long lastPickupTime;
 
   void setDefaultState()
   {
     roboEyes.setMood(DEFAULT);
     roboEyes.setWidth(30, 30);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24); // Resize for 32px height
     roboEyes.setSpacebetween(16);
     roboEyes.setBorderradius(6, 6);
     roboEyes.setPosition(DEFAULT);
@@ -63,12 +67,34 @@ private:
 
   void enterDefaultState()
   {
-    if (currentEyeState == Excited || currentEyeState == Dizzy) {
+    if (currentEyeState == Excited || currentEyeState == Dizzy || currentEyeState == Touched) {
         servo.stop();
     }
     
+    // Reset to normal speed
+    servo.setWiggleSpeed(200);
+
     currentEyeState = Default;
     setDefaultState();
+    Serial.println("CurrentState: Default");
+  }
+
+  void enterTouchedState()
+  {
+    currentEyeState = Touched;
+    roboEyes.setMood(HAPPY);
+    roboEyes.setWidth(36, 36);
+    roboEyes.setHeight(20, 20); // Squinty happy
+    roboEyes.setBorderradius(10, 10);
+    roboEyes.anim_laugh();
+    roboEyes.setIdleMode(OFF);
+    roboEyes.setAutoblinker(OFF);
+    
+    // FAST WIGGLE!
+    servo.setWiggleSpeed(100); 
+    servo.startWiggle();
+    
+    Serial.println("CurrentState: Touched");
   }
 
   void enterHappyState()
@@ -76,11 +102,16 @@ private:
     currentEyeState = Happy;
     roboEyes.setMood(HAPPY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24); // Reduced for 32px screen
     roboEyes.setBorderradius(8, 8);
     roboEyes.anim_laugh();
     roboEyes.setIdleMode(OFF);
     roboEyes.setAutoblinker(OFF);
+    
+    // Normal wiggle for general happiness (not direct touch)
+    servo.setWiggleSpeed(200);
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Happy");
   }
 
@@ -89,11 +120,16 @@ private:
     currentEyeState = LongHappy;
     roboEyes.setMood(HAPPY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24); // Reduced for 32px screen
     roboEyes.setBorderradius(8, 8);
     roboEyes.setVFlicker(ON, 5);
     roboEyes.setIdleMode(OFF);
     roboEyes.setAutoblinker(OFF);
+    
+    // Long press = FAST wiggle too
+    servo.setWiggleSpeed(100);
+    servo.startWiggle();
+    
     Serial.println("CurrentState: LongHappy");
   }
 
@@ -102,7 +138,7 @@ private:
     currentEyeState = Scared;
     roboEyes.setMood(TIRED);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24);
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setSweat(ON);
@@ -117,7 +153,7 @@ private:
     currentEyeState = Scare;
     roboEyes.setMood(TIRED);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24);
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setSweat(OFF);
@@ -132,7 +168,7 @@ private:
     currentEyeState = Curiosity;
     roboEyes.setMood(DEFAULT);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24); // Reduced for 32px screen
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setAutoblinker(ON, 2, 2);
@@ -140,6 +176,11 @@ private:
     roboEyes.setHFlicker(OFF);
     roboEyes.setSweat(OFF);
     roboEyes.setCuriosity(ON);
+    
+    // VERY slow wiggle for curiosity
+    servo.setWiggleSpeed(300);
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Curiosity");
   }
 
@@ -172,7 +213,7 @@ private:
     currentEyeState = Angry;
     roboEyes.setMood(ANGRY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(36, 36);
+    roboEyes.setHeight(24, 24); // Reduced for 32px screen
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setHFlicker(ON, 2);
@@ -184,11 +225,12 @@ private:
     currentEyeState = Excited;
     roboEyes.setMood(HAPPY);
     roboEyes.setWidth(36, 36);
-    roboEyes.setHeight(40, 40);
+    roboEyes.setHeight(28, 28);
     roboEyes.setBorderradius(12, 12);
     roboEyes.setAutoblinker(ON, 1, 1); // Fast blinking
     roboEyes.setHFlicker(ON, 1); // Slight jitter
     
+    servo.setWiggleSpeed(150); // Fast wiggle for pickup
     servo.startWiggle();
     
     Serial.println("CurrentState: Excited");
@@ -199,7 +241,7 @@ private:
     currentEyeState = Dizzy;
     roboEyes.setMood(TIRED); // Droopy eyes
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(32, 32);
+    roboEyes.setHeight(24, 24);
     roboEyes.setSpacebetween(10); // Eyes closer together
     roboEyes.setBorderradius(12, 12); // Round
     // Simulation of rolling eyes managed in update() or just use flicker for now
@@ -207,15 +249,15 @@ private:
     roboEyes.setHFlicker(ON, 8);
     Serial.println("CurrentState: Dizzy");
     
-    // Optional: Could wiggle randomly or stop?
-    // servo.startWiggle(); 
+    servo.setWiggleSpeed(200);
+    servo.startWiggle(); 
   }
 
 public:
   RobotPet(Adafruit_SSD1306 &disp, IMUManager &imuMgr, ServoManager &servoMgr, int width, int heigh, int delay)
       : display(disp), roboEyes(disp), imu(imuMgr), servo(servoMgr),
         screenWidth(width), screenHeight(heigh), refreshDelay(delay),
-        currentEyeState(Default), lastActionTime(0), isRunning(false) {}
+        currentEyeState(Default), lastActionTime(0), lastPickupTime(0), isRunning(false) {}
 
   void begin()
   {
@@ -236,6 +278,7 @@ public:
     lastActionTime = millis();
 
     Serial.println("RobotPet: Started");
+    enterDefaultState(); // Ensure state is logged & reset
   }
 
   void stop()
@@ -264,17 +307,20 @@ public:
     servo.update();
 
     // Check for high priority physical interactions/interrupts
-    if (currentEyeState != Dizzy && currentEyeState != Excited) {
+    // Only check IMU sensors when in non-animated states
+    if (currentEyeState == Default || currentEyeState == Scared || currentEyeState == Scare || currentEyeState == Angry) {
        if (imu.isShaken()) {
          Serial.println(">>> SHAKEN DETECTED <<<");
           enterDizzyState();
           lastActionTime = millis();
          return; // Skip rest of logic
        }
-       if (imu.isPickedUp()) {
+       // Pickup detection with cooldown
+       if (imu.isPickedUp() && (millis() - lastPickupTime >= PICKUP_COOLDOWN)) {
           Serial.println(">>> PICKUP DETECTED <<<");
            enterExcitedState();
            lastActionTime = millis();
+           lastPickupTime = millis(); // Start cooldown
           return; // Skip rest of logic
        }
     }
@@ -330,6 +376,23 @@ public:
         lastActionTime = now;
       }
       break;
+      
+    case Touched:
+      if (elapsed >= TOUCHED_DURATION)
+      {
+          enterDefaultState();
+          lastActionTime = now;
+      }
+      break;
+      
+    case LongHappy:
+       // Logic to stay here? Or timeout?
+       // Usually controlled by LongPressRelease, but safe to timeout
+       if (elapsed >= HAPPY_DURATION * 4) {
+           enterDefaultState();
+           lastActionTime = now;
+       }
+       break;
 
     case Curiosity:
       if (elapsed >= CURIOSITY_DURATION)
@@ -395,28 +458,9 @@ public:
     Serial.print("Click: ");
     Serial.println(clickCount);
 
-    if ((currentEyeState == Asleep || currentEyeState == Sleepy))
-    {
-      enterAngryState();
-      lastActionTime = millis();
-    }
-
-    if (clickCount == 1)
-    {
-      if ((currentEyeState == Default || currentEyeState == Curiosity))
-      {
-        unsigned int randomChoice = random(1, 11);
-        if (randomChoice > 7)
-        {
-          enterAngryState();
-        }
-        else
-        {
-          enterHappyState();
-        }
-        lastActionTime = millis();
-      }
-    }
+    // Touch ALWAYS overrides current state
+    enterTouchedState();
+    lastActionTime = millis();
   }
 
   void longClick()
@@ -425,11 +469,9 @@ public:
       return;
 
     Serial.println("LONG PRESS!");
-    if (currentEyeState == Default || currentEyeState == Curiosity)
-    {
-      enterLongHappyState();
-      lastActionTime = millis();
-    }
+    // Long press ALWAYS overrides
+    enterLongHappyState();
+    lastActionTime = millis();
   }
 
   void longClickRelease()
@@ -438,7 +480,7 @@ public:
       return;
 
     Serial.println("LONG PRESS RELEASE!");
-    currentEyeState = Happy;
+    enterTouchedState(); // Transition to Touched for a bit after release?
   }
 };
 
