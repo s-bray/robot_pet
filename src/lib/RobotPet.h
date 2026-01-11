@@ -102,7 +102,7 @@ private:
     currentEyeState = Happy;
     roboEyes.setMood(HAPPY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(24, 24); // Reduced for 32px screen
+    roboEyes.setHeight(36, 36); // Restored original size
     roboEyes.setBorderradius(8, 8);
     roboEyes.anim_laugh();
     roboEyes.setIdleMode(OFF);
@@ -120,7 +120,7 @@ private:
     currentEyeState = LongHappy;
     roboEyes.setMood(HAPPY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(24, 24); // Reduced for 32px screen
+    roboEyes.setHeight(36, 36); // Restored original size
     roboEyes.setBorderradius(8, 8);
     roboEyes.setVFlicker(ON, 5);
     roboEyes.setIdleMode(OFF);
@@ -168,7 +168,7 @@ private:
     currentEyeState = Curiosity;
     roboEyes.setMood(DEFAULT);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(24, 24); // Reduced for 32px screen
+    roboEyes.setHeight(36, 36); // Restored original size
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setAutoblinker(ON, 2, 2);
@@ -213,7 +213,7 @@ private:
     currentEyeState = Angry;
     roboEyes.setMood(ANGRY);
     roboEyes.setWidth(32, 32);
-    roboEyes.setHeight(24, 24); // Reduced for 32px screen
+    roboEyes.setHeight(36, 36); // Restored original size
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setHFlicker(ON, 2);

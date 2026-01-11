@@ -13,25 +13,20 @@
 #include "lib/ConfigManager.h"
 #include <ArduinoJson.h>
 
-// SPI OLED DEFINITIONS
-#define OLED_MOSI   33 // SDA
-#define OLED_CLK    32 // SCK
-#define OLED_DC     26
-#define OLED_CS     27
-#define OLED_RESET  25
-
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 32 // Confirmed 32px height
-//#define SCREEN_ADDRESS 0x3C // Not used for SPI
 
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
 
 #define TOUCH_PIN 15
 
-// Software SPI Constructor
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
-  OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define SCREEN_ADDRESS 0x3C
+// #define OLED_RESET -1 // Share reset
+
+// I2C Constructor
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 IMUManager imu;
 ServoManager servo(18, 19); // Left=18, Right=19
 TouchManager touch(TOUCH_PIN);
@@ -117,13 +112,12 @@ void setup()
                                      { 
     if (currentState == Animation) robotPet.longClickRelease(); });
 
-  // Initialize SPI Display
-  // Note: SPI display doesn't have an address like 0x3C
-  if (!display.begin(SSD1306_SWITCHCAPVCC))
+  // Initialize I2C Display
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
-      Serial.println("[Display] SPI Allocation Failed");
+      Serial.println("[Display] I2C Allocation Failed");
   } else {
-      Serial.println("[Display] SPI Initialized");
+      Serial.println("[Display] I2C Initialized");
   }
 
   robotPet.begin();
