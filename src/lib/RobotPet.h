@@ -38,13 +38,13 @@ private:
   static const unsigned long DEEP_SLEEP_DELAY = 10000;
   static const unsigned long ANGRY_DURATION = 5000;
   static const unsigned long HAPPY_DURATION = 500;
-  static const unsigned long CURIOSITY_DURATION = 10000;
+  static const unsigned long CURIOSITY_DURATION = 1000;
   static const unsigned long SCARE_DURATION = 4000;
   static const unsigned long SCARED_DURATION = 2000;
-  static const unsigned long EXCITED_DURATION = 3000;
+  static const unsigned long EXCITED_DURATION = 300;
   static const unsigned long DIZZY_DURATION = 4000;
-  static const unsigned long TOUCHED_DURATION = 3000;
-  static const unsigned long PICKUP_COOLDOWN = 5000;
+  static const unsigned long TOUCHED_DURATION = 300;
+  static const unsigned long PICKUP_COOLDOWN = 500;
 
   unsigned long lastActionTime;
   unsigned long lastPickupTime;
@@ -65,19 +65,9 @@ private:
     roboEyes.setCuriosity(OFF);
   }
 
-  void enterDefaultState()
-  {
-    if (currentEyeState == Excited || currentEyeState == Dizzy || currentEyeState == Touched) {
-        servo.stop();
-    }
-    
-    // Reset to normal speed
-    servo.setWiggleSpeed(200);
 
-    currentEyeState = Default;
-    setDefaultState();
-    Serial.println("CurrentState: Default");
-  }
+
+  // Moved enterDefaultState to public section
 
   void enterTouchedState()
   {
@@ -90,9 +80,10 @@ private:
     roboEyes.setIdleMode(OFF);
     roboEyes.setAutoblinker(OFF);
     
-    // FAST WIGGLE!
-    servo.setWiggleSpeed(100); 
-    servo.startWiggle();
+    // User requested NO movement for other states including Touched?
+    // "only want the servomovements in happy and excited, and very very slow in curiosity"
+    // So I will STOP servos here.
+    servo.stop(); 
     
     Serial.println("CurrentState: Touched");
   }
@@ -145,6 +136,7 @@ private:
     roboEyes.setVFlicker(ON, 3);
     roboEyes.setHFlicker(ON, 3);
     roboEyes.setAutoblinker(OFF);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Scared");
   }
 
@@ -160,6 +152,7 @@ private:
     roboEyes.setVFlicker(ON, 3);
     roboEyes.setHFlicker(ON, 3);
     roboEyes.setAutoblinker(OFF);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Scare");
   }
 
@@ -177,8 +170,8 @@ private:
     roboEyes.setSweat(OFF);
     roboEyes.setCuriosity(ON);
     
-    // VERY slow wiggle for curiosity
-    servo.setWiggleSpeed(300);
+    // VERY slow wiggle for curiosity (User requested "very very slow")
+    servo.setWiggleSpeed(600); 
     servo.startWiggle();
     
     Serial.println("CurrentState: Curiosity");
@@ -193,6 +186,7 @@ private:
     roboEyes.setSweat(OFF);
     roboEyes.setAutoblinker(ON, 2, 2);
     roboEyes.setIdleMode(OFF);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Sleepy");
   }
 
@@ -205,6 +199,7 @@ private:
     roboEyes.setAutoblinker(OFF);
     roboEyes.setIdleMode(OFF);
     roboEyes.setBorderradius(0, 0);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Asleep");
   }
 
@@ -217,6 +212,7 @@ private:
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setHFlicker(ON, 2);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Angry");
   }
   
@@ -247,6 +243,7 @@ private:
     // Simulation of rolling eyes managed in update() or just use flicker for now
     roboEyes.setVFlicker(ON, 8);
     roboEyes.setHFlicker(ON, 8);
+    servo.stop(); // No movement
     Serial.println("CurrentState: Dizzy");
     
     servo.setWiggleSpeed(200);
@@ -267,6 +264,14 @@ public:
     setDefaultState();
 
     lastActionTime = millis();
+  }
+
+  void enterDefaultState()
+  {
+    servo.stop();
+    currentEyeState = Default;
+    setDefaultState();
+    Serial.println("CurrentState: Default");
   }
 
   void start()

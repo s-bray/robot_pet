@@ -20,7 +20,7 @@ private:
   static constexpr float PICKUP_THRESHOLD = 2.0f; // Increased to reduce false positives
 
   // Activity average tracking
-  static const int SAMPLE_SIZE = 10;
+  static const int SAMPLE_SIZE = 15; // Increased for better smoothing/robustness
   float gyroHistory[SAMPLE_SIZE];
   float accelHistory[SAMPLE_SIZE];
   int historyIndex = 0;
