@@ -11,7 +11,7 @@ import os
 import time
 from utils import load_config, find_device, list_pyaudio_devices
 import threading
-from utils import apply_fade, led_request
+from utils import apply_fade
 
 audio_q = queue.Queue()
 playback_q = queue.Queue()
@@ -138,9 +138,7 @@ def mic_stream_callback(in_data, frame_count, time_info, status):
     #print("[Mic] Callback triggered")
     volume = np.abs(audio_np).mean()
     now = time.time()
-    if volume > 750 and (now - last_led_update > LED_DEBOUNCE_INTERVAL):
-        led_request("listen")
-        last_led_update = now
+    # LED logic removed
     return (None, pyaudio.paContinue)
 
 

@@ -83,17 +83,6 @@ def find_device(target_name, is_input=True):
     print(f"[Device] No match for {'input' if is_input else 'output'} '{target_name}', using default.")
     return None
 
-def led_request(mode):
-    """Send a blink mode to the trooper LED FIFO pipe."""
-    try:
-        fd = os.open("/tmp/trooper_led", os.O_WRONLY | os.O_NONBLOCK)
-        with os.fdopen(fd, "w") as fifo:
-            fifo.write(mode + "\n")
-    except OSError as e:
-        if e.errno == errno.ENXIO:
-            pass  # no reader
-        else:
-            print(f"[LED] Error: {e}")
 
 def apply_fade(audio_bytes, fade_ms, sample_rate=48000, channels=2, apply_in=True, apply_out=True):
     if fade_ms == 0 or not (apply_in or apply_out):

@@ -5,7 +5,7 @@ import threading
 import subprocess
 import json
 from gpiozero.pins.lgpio import LGPIOFactory
-from gpiozero import Device, Button, LED
+from gpiozero import Device, Button
 from signal import pause
 import cv2
 import mediapipe as mp
@@ -19,16 +19,10 @@ import glob, shutil
 
 Device.pin_factory = LGPIOFactory()
 
-FIFO_PATH = "/tmp/trooper_led"
-if not os.path.exists(FIFO_PATH):
-    os.mkfifo(FIFO_PATH)
 
 BUTTON_PIN = 17
-LED_PIN = 18
-
 button = Button(BUTTON_PIN, pull_up=True, hold_time=0.75)
 
-led = LED(LED_PIN, active_high=False)
 
 client_proc = None
 session_active = [False]  # mutable shared state
@@ -48,16 +42,6 @@ def sync_usb_config():
 sync_usb_config()
 config = load_config()
 
-def led_pipe_listener():
-    while True:
-        with open(FIFO_PATH, "r") as fifo:
-            for line in fifo:
-                mode = line.strip()
-                if mode:
-                    #print(f"[LED] Received mode: {mode}")
-                    led_mode(mode)
-
-threading.Thread(target=led_pipe_listener, daemon=True).start()
 
 def play_message(text):
     voice_model = config.get("voice", "danny-low.onnx")
@@ -128,19 +112,6 @@ def play_message(text):
     p.terminate()
     wf.close()
 
-def led_mode(mode):
-    led.off()  # ⬅️ Ensure we reset state before reconfiguring
-
-    if mode == "off":
-        led.off()
-    elif mode == "solid":
-        led.on()
-    elif mode == "blink":
-        led.blink(on_time=0.08, off_time=0.08) # slow blink LLM
-    elif mode == "speak":
-        led.blink(on_time=0.4, off_time=0.3) # fast blink Piper
-    elif mode == "listen":
-        led.blink(on_time=0.15, off_time=0.15) # user speaking
 
 def session_loop():
     global client_proc
@@ -156,10 +127,9 @@ def session_loop():
         threading.Thread(target=spin_up_ollama, args=(model_name,), daemon=True).start()
 
     print("[Trooper] Booting up.")
-    led_mode("blink")
+    print("[Trooper] Booting up.")
     if greeting_msg:
         play_message(greeting_msg)
-    led_mode("solid")
 
     print("[Debug] Greeting complete, launching client.")
 
@@ -197,7 +167,8 @@ def end_session(msg):
         print("[Trooper] Session ended.")
         client_proc.terminate()
         client_proc.wait()
-        led_mode("off")
+        client_proc.terminate()
+        client_proc.wait()
         if msg:
             play_message(msg)
         time.sleep(1)

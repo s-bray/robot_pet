@@ -5,7 +5,7 @@ import json
 import re
 import os
 from vosk import Model, KaldiRecognizer
-from utils import load_config, led_request, SerialManager
+from utils import load_config, SerialManager, SerialManager
 from utils import get_voice_sample_rate
 
 serial_mgr = SerialManager() # Auto-connects to /dev/ttyUSB0
@@ -141,7 +141,6 @@ async def process_connection(websocket):
     async for message in websocket:
         if isinstance(message, str):
             if message.strip() == "__done__":
-                led_request("solid")
                 continue
             try:
                 data = json.loads(message)
@@ -200,7 +199,8 @@ async def process_connection(websocket):
             print(f"\033[38;5;35m[User]: {user_text}\033[0m")
             messages = [{"role": "system", "content": session_config.get("system_prompt", "")}]
             messages.append({"role": "user", "content": user_text})
-            led_request("blink")
+            messages = [{"role": "system", "content": session_config.get("system_prompt", "")}]
+            messages.append({"role": "user", "content": user_text})
 
             context = [messages[0]] + messages[-session_config.get("history_length", 0):]
             full_response = ""
@@ -219,7 +219,7 @@ async def process_connection(websocket):
                              serial_mgr.send(f"E:{emotion}")
 
                         full_response += segment + " "
-                        led_request("speak")
+                        full_response += segment + " "
                         async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):    
                             await websocket.send(chunk)
                     response_text = ""
