@@ -77,3 +77,14 @@ void ServoManager::stop()
   servoLeft.detach();
   servoRight.detach();
 }
+
+void ServoManager::move(int leftAngle, int rightAngle)
+{
+  if (!servoLeft.attached()) servoLeft.attach(pinLeft, 500, 2400);
+  if (!servoRight.attached()) servoRight.attach(pinRight, 500, 2400);
+
+  isWiggling = false; // Manual move cancels wiggle
+  
+  servoLeft.write(constrain(leftAngle, 0, 180));
+  servoRight.write(constrain(rightAngle, 0, 180));
+}

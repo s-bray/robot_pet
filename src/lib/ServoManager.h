@@ -28,6 +28,7 @@ public:
   void update();
   void startWiggle();
   void stop();
+  void move(int leftAngle, int rightAngle);
 };
 
 #endif

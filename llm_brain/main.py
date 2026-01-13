@@ -12,7 +12,7 @@ import mediapipe as mp
 import wave
 import io
 import pyaudio
-from utils import load_config, find_device, get_voice_sample_rate
+from utils import load_config, find_device, get_voice_sample_rate, SerialManager
 import asyncio
 import aiohttp
 import glob, shutil
@@ -237,6 +237,7 @@ def spin_up_ollama(model):
 
 
 def vision_watch_loop():
+    serial_mgr = SerialManager()
     print("[Vision] Watching for raised hand (MediaPipe)...")
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -245,6 +246,9 @@ def vision_watch_loop():
 
     mp_hands = mp.solutions.hands
     hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.6)
+
+    mp_face = mp.solutions.face_detection
+    face_detection = mp_face.FaceDetection(model_selection=0, min_detection_confidence=0.5)
 
     open_streak = 0
     required_streak = 5
@@ -259,6 +263,20 @@ def vision_watch_loop():
         frame = cv2.flip(frame, 1)
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = hands.process(rgb)
+        face_results = face_detection.process(rgb)
+
+        # --- Face Recognition (Wake on Gaze) ---
+        if face_results.detections:
+            # If we see a face, and session is NOT active, wake up?
+            # Or just send "Happy" to acknowledge presence?
+            
+            # 1. Send Happy Eyes (Proactive Friendliness)
+            # Throttle this so we don't spam serial
+            if now - last_toggle > 5.0 and not session_active[0]:
+                 serial_mgr.send("E:HAPPY")
+                 # Optional: Start session automatically?
+                 # on_button_press() 
+                 pass
 
         if results.multi_hand_landmarks:
             hand = results.multi_hand_landmarks[0]
@@ -292,6 +310,32 @@ def vision_watch_loop():
                 on_button_press()
                 last_toggle = now
                 open_streak = 0  # reset after toggle
+
+            # --- Hand Tracking Logic ---
+            # Hand X is 0.0 (Left) to 1.0 (Right)
+            # Servos are 0 (Right) to 180 (Left) roughly
+            # Let's map X to Servo Angle
+            # Default Center = 90
+            
+            wrist_x = hand.landmark[mp_hands.HandLandmark.WRIST].x
+            
+            # Simple mapping: 0.0 -> 180 (Left), 1.0 -> 0 (Right)
+            # Invert because webcam is mirrored usually, let's assume MIRRORED frame
+            # If I move hand Right (screen Right), X increases.
+            # Robot should look Right (Servo 0).
+            
+            target_angle = int((1.0 - wrist_x) * 180)
+            target_angle = max(0, min(180, target_angle))
+
+            # Send S:L:R (Both eyes/arms move together for head turn effect)
+            # But wait, left/right servos might need opposite moves?
+            # Assuming simple "Look At" head turn uses same angle or mirrored?
+            # Let's assume Head Turn = Left Servo X, Right Servo X?
+            # Or Left Servo = Angle, Right Servo = 180-Angle?
+            
+            # Let's try Parallel movement for now
+            serial_mgr.send(f"S:{target_angle}:{target_angle}")
+
 
         time.sleep(0.3)
 

@@ -3,6 +3,9 @@ import os
 import pyaudio
 import errno
 import numpy as np
+import serial
+import time
+import threading
 
 def load_config():
     CONFIG_PATH = "/home/mjw/Trooper/.trooper_config.json"
@@ -119,3 +122,57 @@ def apply_fade(audio_bytes, fade_ms, sample_rate=48000, channels=2, apply_in=Tru
             ).astype(np.int16)
 
     return audio.tobytes()
+
+class SerialManager:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super(SerialManager, cls).__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self, port='/dev/ttyUSB0', baudrate=921600):
+        if self._initialized: return
+        self.port = port
+        self.baudrate = baudrate
+        self.ser = None
+        self.connect()
+        self._initialized = True
+
+    def connect(self):
+        try:
+            self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
+            print(f"[Serial] Connected to {self.port} at {self.baudrate}")
+            # Reset ESP32 to ensure clean state
+            self.ser.setDTR(False)
+            time.sleep(0.1)
+            self.ser.setDTR(True)
+        except Exception as e:
+            print(f"[Serial] Error connecting to {self.port}: {e}")
+            self.ser = None
+
+    def send(self, command):
+        if not self.ser:
+            # Try reconnecting once
+            self.connect()
+        
+        if self.ser:
+            try:
+                full_cmd = f"{command}\n"
+                self.ser.write(full_cmd.encode('utf-8'))
+                # print(f"[Serial] Sent: {command}")
+            except Exception as e:
+                print(f"[Serial] Send failed: {e}")
+                self.ser = None
+
+    def read_line(self):
+        if self.ser and self.ser.in_waiting:
+            try:
+                return self.ser.readline().decode('utf-8').strip()
+            except:
+                return None
+        return None

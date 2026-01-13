@@ -266,6 +266,25 @@ public:
     lastActionTime = millis();
   }
 
+  // The "Dictionary of Emotions" for the External Brain
+  void setMood(String emotion)
+  {
+    emotion.toUpperCase();
+    Serial.print("Cmd: "); Serial.println(emotion);
+
+    if (emotion == "HAPPY") enterHappyState();
+    else if (emotion == "ANGRY") enterAngryState();
+    else if (emotion == "SCARED") enterScaredState();
+    else if (emotion == "SCARE") enterScareState(); // Alternate naming
+    else if (emotion == "EXCITED") enterExcitedState();
+    else if (emotion == "CURIOUS" || emotion == "CURIOSITY") enterCuriosityState();
+    else if (emotion == "SLEEPY") enterSleepyState();
+    else if (emotion == "ASLEEP" || emotion == "SLEEP") enterAsleepState();
+    else if (emotion == "DIZZY") enterDizzyState();
+    else if (emotion == "DEFAULT" || emotion == "IDLE") enterDefaultState();
+    else Serial.println("Unknown Emotion");
+  }
+
   void enterDefaultState()
   {
     servo.stop();

@@ -71,10 +71,62 @@ void setup()
   robotPet.start();
 }
 
+// --- Serial Command Processor (Hybrid Brain) ---
+void processSerialCommands()
+{
+  if (Serial.available() > 0)
+  {
+    String command = Serial.readStringUntil('\n');
+    command.trim();
+    
+    if (command.length() == 0) return;
+
+    // Protocol: TYPE:ARGS
+    // E:HAPPY   (Emotion)
+    // S:90:90   (Servo Angles) - Manual Override
+    // W:200     (Wiggle Speed)
+    // R         (Reset)
+
+    if (command.startsWith("E:")) 
+    {
+      String mood = command.substring(2);
+      robotPet.setMood(mood);
+    }
+    else if (command.startsWith("W:"))
+    {
+      int speed = command.substring(2).toInt();
+      servo.setWiggleSpeed(speed);
+      if (speed > 0) servo.startWiggle();
+      else servo.stop();
+      Serial.print("Wiggle: "); Serial.println(speed);
+    }
+    else if (command.startsWith("S:"))
+    {
+      // Parse S:L:R (e.g. S:90:90)
+      int firstColon = command.indexOf(':');
+      int secondColon = command.indexOf(':', firstColon + 1);
+      
+      if (secondColon != -1)
+      {
+         int leftAngle = command.substring(firstColon + 1, secondColon).toInt();
+         int rightAngle = command.substring(secondColon + 1).toInt();
+         servo.stop(); // Stop wiggling to allow manual control
+         servo.move(leftAngle, rightAngle);
+         Serial.printf("Servos: %d, %d\n", leftAngle, rightAngle);
+      }
+    }
+    else if (command.equalsIgnoreCase("R"))
+    {
+      robotPet.enterDefaultState();
+    }
+  }
+}
+
 void loop()
 {
   touch.update();
-  robotPet.update();
+  processSerialCommands(); // Listen for Brain commands
+  robotPet.update();       // Run local reflexes (IMU/Animation)
 }
 
 void scanI2C()

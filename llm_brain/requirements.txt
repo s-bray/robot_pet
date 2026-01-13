@@ -13,3 +13,4 @@ gpiozero==2.0
 lgpio==0.0.4
 opencv-python==4.9.0.80
 mediapipe==0.10.9
+pyserial==3.5

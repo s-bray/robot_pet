@@ -13,5 +13,5 @@
   "closing_message": "Signing off!",
   "timeout_message": "Time's up, proceed with your duties!",
   "session_timeout": 500,
-  "vision_wake": false
+  "vision_wake": true
 }

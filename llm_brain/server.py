@@ -5,13 +5,17 @@ import json
 import re
 import os
 from vosk import Model, KaldiRecognizer
-from utils import load_config, led_request
+from utils import load_config, led_request, SerialManager
 from utils import get_voice_sample_rate
+
+serial_mgr = SerialManager() # Auto-connects to /dev/ttyUSB0
 
 RATE = 16000
 CHANNELS = 1
 MODEL_PATH = "vosk-model"
-PIPER_PATH = "/home/mjw/.local/bin/piper"
+MODEL_PATH = "vosk-model"
+# Default to local piper binary if present, otherwise assume system PATH
+PIPER_PATH = "./piper/piper" if os.path.exists("./piper/piper") else "piper"
 
 LOW_EFFORT_UTTERANCES = {"huh", "uh", "um", "erm", "hmm", "he's", "but", "the"}
 
@@ -25,6 +29,16 @@ def clean_response(text):
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'[\U0001F300-\U0001FAFF\u2600-\u26FF\u2700-\u27BF]+', '', text)
     return text
+
+def extract_emotion(text):
+    text = text.upper()
+    if "[HAPPY]" in text or "*GIGGLES*" in text or "HAHA" in text: return "HAPPY"
+    if "[ANGRY]" in text or "HATE" in text or "FURIOUS" in text: return "ANGRY"
+    if "[SCARED]" in text or "AFRAID" in text: return "SCARED"
+    if "[EXCITED]" in text or "WOW" in text: return "EXCITED"
+    if "[SAD]" in text or "CRYING" in text: return "TIRED" # Map SAD to TIRED/Sleepy
+    if "[CURIOUS]" in text: return "CURIOSITY"
+    return None
 
 # helper coroutine for piper startup
 async def monitor_piper_stderr(stderr_pipe):
@@ -199,6 +213,11 @@ async def process_connection(websocket):
                     if segment and not re.fullmatch(r"[.?!\-–—…]+", segment):
                         # color code the output
                         print(f"\033[38;5;75m[Trooper]: {segment}\033[0m")
+                        
+                        emotion = extract_emotion(segment)
+                        if emotion:
+                             serial_mgr.send(f"E:{emotion}")
+
                         full_response += segment + " "
                         led_request("speak")
                         async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):    
