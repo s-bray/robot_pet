@@ -1,0 +1,17 @@
+{
+  "volume": 95,
+  "mic_name": "USB Camera-B4.09.24.1: Audio",
+  "audio_output_device": "USB PnP Sound Device: Audio",
+  "model_name": "gemma3:1b",
+  "voice": "ryan-low.onnx",
+  "mute_mic_during_playback": true,
+  "fade_duration_ms": 50,
+  "retro_voice_fx": false,
+  "history_length": 4,
+  "system_prompt": "You are a loyal stormtrooper. Protect the empire.",
+  "greeting_message": "Identify yourself!",
+  "closing_message": "Signing off!",
+  "timeout_message": "Time's up, proceed with your duties!",
+  "session_timeout": 500,
+  "vision_wake": false
+}
