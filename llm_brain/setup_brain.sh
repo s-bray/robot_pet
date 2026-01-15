@@ -21,13 +21,28 @@ fi
 # 3. Download Piper (Speaking)
 if [ ! -f "piper/piper" ]; then
     echo "🗣️ Downloading Piper (Text-to-Speech)..."
-    # Assuming Linux x86_64, adjust for Raspberry Pi (arm64) if needed
-    wget https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
-    tar -xvf piper_linux_x86_64.tar.gz
-    rm piper_linux_x86_64.tar.gz
+    
+    ARCH=$(uname -m)
+    if [ "$ARCH" = "aarch64" ]; then
+        echo "   -> Detected ARM64 (Raspberry Pi 64-bit)"
+        URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_aarch64.tar.gz"
+        FILE="piper_linux_aarch64.tar.gz"
+    elif [ "$ARCH" = "armv7l" ]; then
+        echo "   -> Detected ARMv7 (Raspberry Pi 32-bit)"
+        URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_armv7l.tar.gz"
+        FILE="piper_linux_armv7l.tar.gz"
+    else
+        echo "   -> Detected x86_64 (PC)"
+        URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz"
+        FILE="piper_linux_x86_64.tar.gz"
+    fi
+
+    wget -O $FILE $URL
+    tar -xvf $FILE
+    rm $FILE
     echo "✅ Piper Installed"
 else
-    echo "✅ Piper already present"
+    echo "✅ Piper already present (Delete 'piper' folder to reinstall)"
 fi
 
 # 4. Download Voice

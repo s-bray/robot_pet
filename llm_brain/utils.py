@@ -8,7 +8,9 @@ import time
 import threading
 
 def load_config():
-    CONFIG_PATH = "/home/mjw/Trooper/.trooper_config.json"
+    # Load config relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    CONFIG_PATH = os.path.join(script_dir, "trooper_config.json")
     DEFAULTS = {
         "volume": 95,
         "mic_name": "USB Camera-B4.09.24.1: Audio",

@@ -4,11 +4,11 @@ import os
 import threading
 import subprocess
 import json
-from gpiozero.pins.lgpio import LGPIOFactory
-from gpiozero import Device, Button
+# from gpiozero.pins.lgpio import LGPIOFactory
+# from gpiozero import Device
 from signal import pause
 import cv2
-import mediapipe as mp
+# import mediapipe as mp
 import wave
 import io
 import pyaudio
@@ -17,15 +17,14 @@ import asyncio
 import aiohttp
 import glob, shutil
 
-Device.pin_factory = LGPIOFactory()
+# Device.pin_factory = LGPIOFactory()
 
 
-BUTTON_PIN = 17
-button = Button(BUTTON_PIN, pull_up=True, hold_time=0.75)
 
 
 client_proc = None
-session_active = [False]  # mutable shared state
+client_proc = None
+session_active = [True]  # Always active
 
 timeout_thread = None
 
@@ -51,9 +50,16 @@ def play_message(text):
 
     print(f"[Debug] Playing message: '{text}' to device index {AUDIO_OUTPUT_DEVICE_INDEX}")
 
-    # Generate raw PCM from Piper
+    # Resolve piper path relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    local_piper = os.path.join(script_dir, "piper", "piper")
+    
+    piper_exec = local_piper if os.path.exists(local_piper) else "piper"
+
+    print(f"[Debug] Using Piper at: {piper_exec}")
+
     proc = subprocess.Popen(
-        ["/home/mjw/.local/bin/piper", '--model', f'voices/{voice_model}', '--output_raw'],
+        [piper_exec, '--model', f'voices/{voice_model}', '--output_raw'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
@@ -135,30 +141,18 @@ def session_loop():
 
     log_file = open("./client.log", "w")
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    client_script = os.path.join(script_dir, "client.py")
+
     client_proc = subprocess.Popen(
-        ["python3", "client.py"],
-        stdout=log_file,
-        stderr=subprocess.STDOUT
+        ["python3", client_script],
+        # stdout=log_file,
+        # stderr=subprocess.STDOUT
     )
     print("[Debug] client.py launched.")
 
-    def monitor_timeout(timeout_sec):
-        if timeout_sec <= 0:
-            return
-        print(f"[Timeout] Session timeout armed for {timeout_sec} seconds.")
-        time.sleep(timeout_sec)
-        if session_active[0]:
-            print("[Timeout] Session timeout expired. Ending session.")
-            session_active[0] = False
-            end_session(timeout_msg)
-
-    global timeout_thread
-
-    if timeout_thread and timeout_thread.is_alive():
-        print("[Debug] Timeout thread already running — skipping.")
-    else:
-        timeout_thread = threading.Thread(target=monitor_timeout, args=(timeout_sec,), daemon=True)
-        timeout_thread.start()
+    # No timeout
+    pass
 
 def end_session(msg):
     global client_proc
@@ -173,18 +167,6 @@ def end_session(msg):
             play_message(msg)
         time.sleep(1)
 
-def on_button_press():
-    global config
-    closing_msg = config.get("closing_message", "").strip()
-    if not session_active[0]:
-        session_active[0] = True
-        session_loop()
-    else:
-        session_active[0] = False
-        end_session(closing_msg)
-
-def on_tap():
-    print("[Button] Ignored short press")        
 
 def spin_up_ollama(model):
     async def warmup():
@@ -278,9 +260,7 @@ def vision_watch_loop():
 
             if open_streak >= required_streak and now - last_toggle > cooldown_seconds:
                 print("[Gesture] Open hand detected — toggling session.")
-                on_button_press()
-                last_toggle = now
-                open_streak = 0  # reset after toggle
+                # on_button_press()
 
             # --- Hand Tracking Logic ---
             # Hand X is 0.0 (Left) to 1.0 (Right)
@@ -310,15 +290,12 @@ def vision_watch_loop():
 
         time.sleep(0.3)
 
-button.when_held = on_button_press
-button.when_released = on_tap
-
-print("[System] Awaiting button press...")
+print("[System] Always Listening mode active...")
 
 if config.get("vision_wake", False):
     threading.Thread(target=vision_watch_loop, daemon=True).start()
-    print("[System] Hand-raise wake active.")
-else:
-    print("[System] Vision wake disabled in config.")
+    print("[System] Vision active.")
+
+session_loop()
 
 pause()

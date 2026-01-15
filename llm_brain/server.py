@@ -5,17 +5,18 @@ import json
 import re
 import os
 from vosk import Model, KaldiRecognizer
-from utils import load_config, SerialManager, SerialManager
+from utils import load_config, SerialManager
 from utils import get_voice_sample_rate
 
 serial_mgr = SerialManager() # Auto-connects to /dev/ttyUSB0
 
 RATE = 16000
 CHANNELS = 1
-MODEL_PATH = "vosk-model"
-MODEL_PATH = "vosk-model"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(script_dir, "vosk-model")
 # Default to local piper binary if present, otherwise assume system PATH
-PIPER_PATH = "./piper/piper" if os.path.exists("./piper/piper") else "piper"
+local_piper = os.path.join(script_dir, "piper", "piper")
+PIPER_PATH = local_piper if os.path.exists(local_piper) else "piper"
 
 LOW_EFFORT_UTTERANCES = {"huh", "uh", "um", "erm", "hmm", "he's", "but", "the"}
 
@@ -88,11 +89,23 @@ async def stream_ollama_response(model, messages):
         except json.JSONDecodeError:
             continue
 
-async def stream_tts(text, piper_proc, retro_voice_fx, voice):
-    sample_rate = get_voice_sample_rate(voice)
-    piper_proc.stdin.write(text.encode() + b'\n')
-    await piper_proc.stdin.drain()
-
+async def stream_tts(text, piper_proc, retro_mode, voice_name):
+    """
+    Streams audio chunks from Piper (and optionally filters them).
+    """
+    if piper_proc is None:
+        # print("[TTS Warning] partial response skipped (no audio engine)")
+        return
+        
+    try:
+        piper_proc.stdin.write(text.encode() + b'\n')
+        await piper_proc.stdin.drain()
+    except Exception as e:
+        print(f"[TTS Error] Write failed: {e}")
+        return
+    
+    sample_rate = get_voice_sample_rate(voice_name)
+    
     raw_pcm = b""
     while True:
         try:
@@ -114,7 +127,7 @@ async def stream_tts(text, piper_proc, retro_voice_fx, voice):
         "-t", "raw", "-r", str(sample_rate), "-c", "1", "-b", "16", "-e", "signed-integer", "-",
         "-r", "48000", "-c", "2", "-t", "raw", "-"
     ]
-    if retro_voice_fx:
+    if retro_mode:
         sox_cmd += [
             "highpass", "300", "lowpass", "3400",
             "compand", "0.3,1", "6:-70,-60,-20", "-5", "-90", "0.2",
@@ -148,7 +161,9 @@ async def process_connection(websocket):
                     session_config = data.get("config", {})
                     print("[Server] Config synced:", session_config.get("voice"))
 
-                    voice_model_path = f"voices/{session_config['voice']}"
+                    # Resolve voice path relative to this script
+                    voice_model_path = os.path.join(script_dir, "voices", session_config.get("voice", "ryan-low.onnx"))
+
                     if not os.path.exists(voice_model_path):
                         print(f"[ERROR] Voice model not found: {voice_model_path}")
                         await websocket.send("__ERROR__: Voice model not found.")
@@ -226,12 +241,16 @@ async def process_connection(websocket):
 
             if response_text.strip():
                 segment = clean_response(response_text).strip()
+                
+                emotion = extract_emotion(segment)
+                if emotion:
+                     serial_mgr.send(f"E:{emotion}")
+
                 full_response += segment + " "
                 async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):
                     await websocket.send(chunk)
 
             await websocket.send("__END__")
-            led_request("solid")
 
     try:
         if piper_proc and piper_proc.stdin:

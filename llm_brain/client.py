@@ -128,17 +128,17 @@ async def receive_audio(ws, config):
         pass
 
 
-last_led_update = 0  # global or persistent variable
-LED_DEBOUNCE_INTERVAL = 0.5  # seconds (500ms)
 
 def mic_stream_callback(in_data, frame_count, time_info, status):
-    global last_led_update
     audio_np = np.frombuffer(in_data, dtype=np.int16)
     audio_q.put(audio_np)
     #print("[Mic] Callback triggered")
     volume = np.abs(audio_np).mean()
+    # Simple VU Meter for debug
+    if frame_count % 50 == 0:  # Don't spam
+        print(f"[Mic Debug] Volume: {int(volume)}")
+    
     now = time.time()
-    # LED logic removed
     return (None, pyaudio.paContinue)
 
 
@@ -163,10 +163,17 @@ async def main():
     if MIC_INDEX is None:
         print(f"[Error] Input device '{config['mic_name']}' not found. Please check mic connection.")
         return
-    AUDIO_OUTPUT_DEVICE_INDEX = find_device(config.get("audio_output_device", ""), is_input=False)
+    
+    device_name = config.get("audio_output_device", "")
+    AUDIO_OUTPUT_DEVICE_INDEX = find_device(device_name, is_input=False)
+    
     if AUDIO_OUTPUT_DEVICE_INDEX is None:
-        print(f"[Error] Output device '{config['audio_output_device']}' not found. Please check speaker connection.")
-        return
+        print("[Warning] Output device not found. Using System Default.")
+        # Do not crash, just continue with None (Default)
+        AUDIO_OUTPUT_DEVICE_INDEX = None # PyAudio treats None as default
+    else:
+        print(f"[Audio] Output device set to index {AUDIO_OUTPUT_DEVICE_INDEX}")
+        
     DEVICE_INFO = pa.get_device_info_by_index(MIC_INDEX)
     RATE = int(DEVICE_INFO["defaultSampleRate"])
     MUTE_MIC = config.get("mute_mic_during_playback", True)
@@ -194,33 +201,44 @@ async def main():
     mic_stream.start_stream()
 
     uri = "ws://localhost:8765"
-    async with websockets.connect(
-        uri,
-        ping_timeout=120,
-        ping_interval=30
-    ) as ws:    
-        print("[Client] Connected to WebSocket server.")
+    connected = False
+    
+    while not connected:
+        try:
+            async with websockets.connect(
+                uri,
+                ping_timeout=120,
+                ping_interval=30
+            ) as ws:
+                connected = True
+                print("[Client] Connected to WebSocket server.")
 
-        await ws.send(json.dumps({
-            "type": "config_sync",
-            "config": config
-        }))
+                await ws.send(json.dumps({
+                    "type": "config_sync",
+                    "config": config
+                }))
 
-        loop = asyncio.get_running_loop()
-        global outgoing_ws
-        outgoing_ws = ws  # still needed globally
+                loop = asyncio.get_running_loop()
+                global outgoing_ws
+                outgoing_ws = ws  # still needed globally
 
-        playback_thread = threading.Thread(
-            target=audio_playback_worker,
-            args=(AUDIO_OUTPUT_DEVICE_INDEX, loop),  # pass the loop
-            daemon=True
-        )
-        playback_thread.start()
+                playback_thread = threading.Thread(
+                    target=audio_playback_worker,
+                    args=(AUDIO_OUTPUT_DEVICE_INDEX, loop),  # pass the loop
+                    daemon=True
+                )
+                playback_thread.start()
 
-        await asyncio.gather(
-            send_audio(ws, config),
-            receive_audio(ws, config)
-        )
+                await asyncio.gather(
+                    send_audio(ws, config),
+                    receive_audio(ws, config)
+                )
+        except (OSError, ConnectionRefusedError) as e:
+            print(f"[Client] Connection failed ({e}). Retrying in 3s...")
+            await asyncio.sleep(3)
+        except Exception as e:
+            print(f"[Client] Unexpected error: {e}")
+            break
     mic_stream.stop_stream()
     mic_stream.close()
     pa.terminate()

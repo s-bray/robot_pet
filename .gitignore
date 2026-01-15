@@ -1,2 +1,8 @@
 .pio
 .pio/
+llm_brain/piper
+llm_brain/voices
+llm_brain/vosk-model
+llm_brain/__pycache__
+llm_brain/client.log
+client.log
