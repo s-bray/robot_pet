@@ -16,7 +16,7 @@ private:
   bool longPressFired;
   bool longPressActive;
 
-  const unsigned long debounceDelay = 50;
+  const unsigned long debounceDelay = 10;
   const unsigned long multiClickDelay = 300;
   const unsigned long longPressTime = 800;
 

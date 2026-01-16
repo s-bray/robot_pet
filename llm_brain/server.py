@@ -220,6 +220,7 @@ async def process_connection(websocket):
             context = [messages[0]] + messages[-session_config.get("history_length", 0):]
             full_response = ""
             response_text = ""
+            current_emotion = "DEFAULT" # Track emotion across segments
 
             async for token in stream_ollama_response(session_config["model_name"], context):
                 response_text += token
@@ -231,9 +232,13 @@ async def process_connection(websocket):
                         
                         emotion = extract_emotion(segment)
                         if emotion:
+                             current_emotion = emotion
                              serial_mgr.send(f"E:{emotion}")
+                        elif current_emotion != "DEFAULT":
+                             # Sticky emotion: keep previous if new segment has none
+                             pass 
                         else:
-                             serial_mgr.send("E:DEFAULT") # Fallback to normal if no emotion
+                             serial_mgr.send("E:DEFAULT")
 
                         full_response += segment + " "
                         async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):    
@@ -250,7 +255,10 @@ async def process_connection(websocket):
                 
                 emotion = extract_emotion(segment)
                 if emotion:
+                     current_emotion = emotion
                      serial_mgr.send(f"E:{emotion}")
+                elif current_emotion != "DEFAULT":
+                     pass
                 else:
                      serial_mgr.send("E:DEFAULT")
 
