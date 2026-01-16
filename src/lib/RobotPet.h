@@ -130,7 +130,11 @@ private:
     roboEyes.setVFlicker(ON, 3);
     roboEyes.setHFlicker(ON, 3);
     roboEyes.setAutoblinker(OFF);
-    servo.stop(); // No movement
+    
+    // Shivering/Trembling
+    servo.setWiggleSpeed(80); 
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Scared");
   }
 
@@ -146,7 +150,11 @@ private:
     roboEyes.setVFlicker(ON, 3);
     roboEyes.setHFlicker(ON, 3);
     roboEyes.setAutoblinker(OFF);
-    servo.stop(); // No movement
+    
+    // Still shivering
+    servo.setWiggleSpeed(80);
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Scare");
   }
 
@@ -180,7 +188,11 @@ private:
     roboEyes.setSweat(OFF);
     roboEyes.setAutoblinker(ON, 2, 2);
     roboEyes.setIdleMode(OFF);
-    servo.stop(); // No movement
+    
+    // Slow, lethargic movements
+    servo.setWiggleSpeed(1200); 
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Sleepy");
   }
 
@@ -193,7 +205,7 @@ private:
     roboEyes.setAutoblinker(OFF);
     roboEyes.setIdleMode(OFF);
     roboEyes.setBorderradius(0, 0);
-    servo.stop(); // No movement
+    servo.stop(); // No movement when fully asleep
     Serial.println("CurrentState: Asleep");
   }
 
@@ -206,7 +218,11 @@ private:
     roboEyes.setBorderradius(8, 8);
     roboEyes.setPosition(DEFAULT);
     roboEyes.setHFlicker(ON, 2);
-    servo.stop(); // No movement
+    
+    // Aggressive, fast movements
+    servo.setWiggleSpeed(120); 
+    servo.startWiggle();
+    
     Serial.println("CurrentState: Angry");
   }
   
