@@ -207,8 +207,8 @@ async def main():
         try:
             async with websockets.connect(
                 uri,
-                ping_timeout=120,
-                ping_interval=30
+                ping_timeout=None,
+                ping_interval=None
             ) as ws:
                 connected = True
                 print("[Client] Connected to WebSocket server.")
