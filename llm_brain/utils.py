@@ -138,10 +138,7 @@ class SerialManager:
         try:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=1)
             print(f"[Serial] Connected to {self.port} at {self.baudrate}")
-            # Reset ESP32 to ensure clean state
-            self.ser.setDTR(False)
-            time.sleep(0.1)
-            self.ser.setDTR(True)
+
         except Exception as e:
             print(f"[Serial] Error connecting to {self.port}: {e}")
             self.ser = None
