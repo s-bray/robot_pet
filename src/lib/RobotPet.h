@@ -318,7 +318,10 @@ public:
 
   void enterDefaultState()
   {
+    // Return to neutral position before stopping
+    servo.move(90, 90);
     servo.stop();
+    
     currentEyeState = Default;
     setDefaultState();
     Serial.println("CurrentState: Default");
@@ -454,6 +457,13 @@ public:
     Serial.println("LONG PRESS!");
     // Long press ALWAYS overrides
     enterLongHappyState();
+    lastActionTime = millis();
+  }
+
+  void touchDown()
+  {
+    if (!isRunning) return;
+    enterTouchedState();
     lastActionTime = millis();
   }
 

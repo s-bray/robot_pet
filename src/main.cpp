@@ -40,6 +40,10 @@ void setup()
   
   touch.begin();
   
+  touch.addTouchDownCallback([]() {
+      robotPet.touchDown();
+  });
+  
   touch.addClickCallback([](int count) { 
       // robotPet.shortClick(count); // Optional if touch-down handles immediate reaction
       // But keeping proper click handling is good for transitions if needed

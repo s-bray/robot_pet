@@ -23,6 +23,7 @@ private:
   std::vector<std::function<void(int)>> clickCallbacks;
   std::vector<std::function<void()>> longPressCallbacks;
   std::vector<std::function<void()>> longPressReleaseCallbacks;
+  std::vector<std::function<void()>> touchDownCallbacks;
 
 public:
   TouchManager(int pin);
@@ -32,11 +33,13 @@ public:
   void addClickCallback(std::function<void(int)> cb);
   void addLongPressCallback(std::function<void()> cb);
   void addLongPressReleaseCallback(std::function<void()> cb);
+  void addTouchDownCallback(std::function<void()> cb);
 
 private:
   void onClick(int count);
   void onLongPress();
   void onLongPressRelease();
+  void onTouchDown();
 };
 
 #endif

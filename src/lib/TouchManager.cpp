@@ -31,6 +31,11 @@ void TouchManager::addLongPressReleaseCallback(std::function<void()> cb)
   longPressReleaseCallbacks.push_back(cb);
 }
 
+void TouchManager::addTouchDownCallback(std::function<void()> cb)
+{
+  touchDownCallbacks.push_back(cb);
+}
+
 void TouchManager::update()
 {
   bool reading = digitalRead(pin);
@@ -46,6 +51,7 @@ void TouchManager::update()
       touchDownTime = now;
       longPressFired = false;
       longPressActive = false;
+      onTouchDown(); // Trigger immediate response
     }
   }
 
@@ -101,6 +107,13 @@ void TouchManager::onLongPress()
 void TouchManager::onLongPressRelease()
 {
   for (auto &cb : longPressReleaseCallbacks)
+    if (cb)
+      cb();
+}
+
+void TouchManager::onTouchDown()
+{
+  for (auto &cb : touchDownCallbacks)
     if (cb)
       cb();
 }
