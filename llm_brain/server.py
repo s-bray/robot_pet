@@ -212,8 +212,8 @@ async def process_connection(websocket):
 
             # color code the output
             print(f"\033[38;5;35m[User]: {user_text}\033[0m")
-            messages = [{"role": "system", "content": session_config.get("system_prompt", "")}]
-            messages.append({"role": "user", "content": user_text})
+            serial_mgr.send("E:LISTENING") # Robot pays attention
+
             messages = [{"role": "system", "content": session_config.get("system_prompt", "")}]
             messages.append({"role": "user", "content": user_text})
 
@@ -232,11 +232,17 @@ async def process_connection(websocket):
                         emotion = extract_emotion(segment)
                         if emotion:
                              serial_mgr.send(f"E:{emotion}")
+                        else:
+                             serial_mgr.send("E:DEFAULT") # Fallback to normal if no emotion
 
                         full_response += segment + " "
-                        full_response += segment + " "
                         async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):    
-                            await websocket.send(chunk)
+                            try:
+                                await websocket.send(chunk)
+                            except websockets.exceptions.ConnectionClosed:
+                                print("[Server] Client disconnected during playback.")
+                                return
+
                     response_text = ""
 
             if response_text.strip():
@@ -245,12 +251,21 @@ async def process_connection(websocket):
                 emotion = extract_emotion(segment)
                 if emotion:
                      serial_mgr.send(f"E:{emotion}")
+                else:
+                     serial_mgr.send("E:DEFAULT")
 
                 full_response += segment + " "
                 async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):
-                    await websocket.send(chunk)
+                    try:
+                        await websocket.send(chunk)
+                    except websockets.exceptions.ConnectionClosed:
+                        print("[Server] Client disconnected during playback.")
+                        return
 
-            await websocket.send("__END__")
+            try:
+                await websocket.send("__END__")
+            except websockets.exceptions.ConnectionClosed:
+                pass
 
     try:
         if piper_proc and piper_proc.stdin:

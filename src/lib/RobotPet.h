@@ -31,14 +31,16 @@ private:
     Angry,
     Excited,
     Dizzy,
-    Touched
+    Touched,
+    Listening // New state for VAD
   } currentEyeState;
 
   static const unsigned long IDLE_DELAY = 5000;
+  static const unsigned long LISTENING_TIMEOUT = 15000; // 15s timeout for listening
   static const unsigned long DEEP_SLEEP_DELAY = 10000;
   static const unsigned long ANGRY_DURATION = 5000;
-  static const unsigned long HAPPY_DURATION = 500;
-  static const unsigned long CURIOSITY_DURATION = 1000;
+  static const unsigned long HAPPY_DURATION = 2000; // Increased to 2s to show emotion longer
+  static const unsigned long CURIOSITY_DURATION = 3000; // Increased to 3s
   static const unsigned long SCARE_DURATION = 4000;
   static const unsigned long SCARED_DURATION = 2000;
   static const unsigned long EXCITED_DURATION = 300;
@@ -65,10 +67,6 @@ private:
     roboEyes.setCuriosity(OFF);
   }
 
-
-
-  // Moved enterDefaultState to public section
-
   void enterTouchedState()
   {
     currentEyeState = Touched;
@@ -80,11 +78,7 @@ private:
     roboEyes.setIdleMode(OFF);
     roboEyes.setAutoblinker(OFF);
     
-    // User requested NO movement for other states including Touched?
-    // "only want the servomovements in happy and excited, and very very slow in curiosity"
-    // So I will STOP servos here.
     servo.stop(); 
-    
     Serial.println("CurrentState: Touched");
   }
 
@@ -250,6 +244,26 @@ private:
     servo.startWiggle(); 
   }
 
+  // New Listening State
+  void enterListeningState()
+  {
+    currentEyeState = Listening;
+    roboEyes.setMood(DEFAULT);
+    roboEyes.setWidth(32, 32);
+    roboEyes.setHeight(34, 34); // Slightly taller than default
+    roboEyes.setBorderradius(8, 8);
+    roboEyes.setPosition(DEFAULT);
+    roboEyes.setAutoblinker(ON, 2, 2);
+    roboEyes.setIdleMode(OFF);
+    roboEyes.setCuriosity(ON); // Look curious
+    
+    // Slow attentive wiggle
+    servo.setWiggleSpeed(600); 
+    servo.startWiggle();
+    
+    Serial.println("CurrentState: Listening");
+  }
+
 public:
   RobotPet(Adafruit_SSD1306 &disp, IMUManager &imuMgr, ServoManager &servoMgr, int width, int heigh, int delay)
       : display(disp), roboEyes(disp), imu(imuMgr), servo(servoMgr),
@@ -275,9 +289,10 @@ public:
     if (emotion == "HAPPY") enterHappyState();
     else if (emotion == "ANGRY") enterAngryState();
     else if (emotion == "SCARED") enterScaredState();
-    else if (emotion == "SCARE") enterScareState(); // Alternate naming
+    else if (emotion == "SCARE") enterScareState();
     else if (emotion == "EXCITED") enterExcitedState();
     else if (emotion == "CURIOUS" || emotion == "CURIOSITY") enterCuriosityState();
+    else if (emotion == "LISTENING") enterListeningState(); // New mapping
     else if (emotion == "SLEEPY") enterSleepyState();
     else if (emotion == "ASLEEP" || emotion == "SLEEP") enterAsleepState();
     else if (emotion == "DIZZY") enterDizzyState();
@@ -332,12 +347,12 @@ public:
 
     // Check for high priority physical interactions/interrupts
     // Only check IMU sensors when in non-animated states
-    if (currentEyeState == Default || currentEyeState == Scared || currentEyeState == Scare || currentEyeState == Angry) {
+    if (currentEyeState == Default || currentEyeState == Scared || currentEyeState == Scare || currentEyeState == Angry || currentEyeState == Listening || currentEyeState == Curiosity) {
        if (imu.isShaken()) {
          Serial.println(">>> SHAKEN DETECTED <<<");
           enterDizzyState();
           lastActionTime = millis();
-         return; // Skip rest of logic
+         return; 
        }
        // Pickup detection with cooldown
        if (imu.isPickedUp() && (millis() - lastPickupTime >= PICKUP_COOLDOWN)) {
@@ -345,7 +360,7 @@ public:
            enterExcitedState();
            lastActionTime = millis();
            lastPickupTime = millis(); // Start cooldown
-          return; // Skip rest of logic
+          return; 
        }
     }
 
@@ -357,118 +372,46 @@ public:
     case Default:
       if (elapsed >= IDLE_DELAY)
       {
-        unsigned int randomChoice = random(1, 11);
-        if (randomChoice > 8)
-          enterSleepyState();
-        else if (randomChoice > 5)
-          enterHappyState();
-        else
+        // User requested: "only stays in default and curiosity mode if no updates"
+        // So we randomly switch to Curiosity sometimes, otherwise stay Default.
+        unsigned int randomChoice = random(1, 10);
+        if (randomChoice > 7) // 30% chance
           enterCuriosityState();
+        else
+            lastActionTime = now; // Reset timer, stay Default
+      }
+      break;
 
-        lastActionTime = now;
+    case Listening:
+      // Failsafe timeout if server hangs
+      if (elapsed >= LISTENING_TIMEOUT) {
+          enterDefaultState();
+          lastActionTime = now;
       }
       break;
 
     case Angry:
-      if (elapsed >= ANGRY_DURATION)
-      {
-        enterDefaultState();
-        lastActionTime = now;
-      }
-      break;
-
+      if (elapsed >= ANGRY_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Scare:
-      if (elapsed >= SCARE_DURATION)
-      {
-        enterDefaultState();
-        lastActionTime = now;
-      }
-      break;
-
+      if (elapsed >= SCARE_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Scared:
-      if (elapsed >= SCARED_DURATION)
-      {
-        enterScareState();
-        lastActionTime = now;
-      }
-      break;
-
+      if (elapsed >= SCARED_DURATION) { enterScareState(); lastActionTime = now; } break;
     case Happy:
-      if (elapsed >= HAPPY_DURATION)
-      {
-        enterDefaultState();
-        lastActionTime = now;
-      }
-      break;
-      
+      if (elapsed >= HAPPY_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Touched:
-      if (elapsed >= TOUCHED_DURATION)
-      {
-          enterDefaultState();
-          lastActionTime = now;
-      }
-      break;
-      
+      if (elapsed >= TOUCHED_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case LongHappy:
-       // Logic to stay here? Or timeout?
-       // Usually controlled by LongPressRelease, but safe to timeout
-       if (elapsed >= HAPPY_DURATION * 4) {
-           enterDefaultState();
-           lastActionTime = now;
-       }
-       break;
-
+       if (elapsed >= HAPPY_DURATION * 4) { enterDefaultState(); lastActionTime = now; } break;
     case Curiosity:
-      if (elapsed >= CURIOSITY_DURATION)
-      {
-        unsigned int randomChoice = random(1, 11);
-        if (randomChoice > 8)
-          enterSleepyState();
-        else if (randomChoice > 5)
-          enterHappyState();
-        else
-          enterCuriosityState();
-
-        lastActionTime = now;
-      }
-      break;
-
+      if (elapsed >= CURIOSITY_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Sleepy:
-      if (elapsed >= DEEP_SLEEP_DELAY)
-      {
-        enterAsleepState();
-        lastActionTime = now;
-      }
-      break;
-
+      if (elapsed >= DEEP_SLEEP_DELAY) { enterAsleepState(); lastActionTime = now; } break;
     case Asleep:
-      if (elapsed >= DEEP_SLEEP_DELAY)
-      {
-        unsigned int randomChoice = random(1, 11);
-        if (randomChoice > 8)
-          enterSleepyState();
-        else
-          enterDefaultState();
-
-        lastActionTime = now;
-      }
-      break;
-      
-   case Excited:
-      if (elapsed >= EXCITED_DURATION)
-      {
-          enterDefaultState();
-          lastActionTime = now;
-      }
-      break;
-      
+      if (elapsed >= DEEP_SLEEP_DELAY) { enterDefaultState(); lastActionTime = now; } break;
+    case Excited:
+      if (elapsed >= EXCITED_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Dizzy:
-      if (elapsed >= DIZZY_DURATION)
-      {
-          enterDefaultState();
-          lastActionTime = now;
-      }
-      break;
+      if (elapsed >= DIZZY_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     }
 
     roboEyes.update();

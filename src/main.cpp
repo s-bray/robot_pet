@@ -2,11 +2,11 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "lib/TouchManager.h"
+#include "lib/ConfigManager.h"
 #include "lib/RobotPet.h"
 #include "lib/IMUManager.h"
 #include "lib/ServoManager.h"
-#include "lib/TouchManager.h"
-#include "lib/ConfigManager.h"
 
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
