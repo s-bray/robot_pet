@@ -4,6 +4,8 @@ import websockets
 import json
 import re
 import os
+import random
+import time
 from vosk import Model, KaldiRecognizer
 from utils import load_config, SerialManager
 from utils import get_voice_sample_rate
@@ -19,6 +21,17 @@ local_piper = os.path.join(script_dir, "piper", "piper")
 PIPER_PATH = local_piper if os.path.exists(local_piper) else "piper"
 
 LOW_EFFORT_UTTERANCES = {"huh", "uh", "um", "erm", "hmm", "he's", "but", "the"}
+
+# Attention-seeking behavior when user is silent
+ATTENTION_TIMEOUT = 60  # seconds before robot speaks up
+ATTENTION_COOLDOWN = 120  # seconds between attention-seeking attempts
+ATTENTION_PHRASES = [
+    "Hey, are you still there?",
+    "I'm getting bored over here...",
+    "Wanna talk about something?",
+    "Hello? Anyone there?",
+    "I miss chatting with you!",
+]
 
 vosk_model = Model(MODEL_PATH)
 
@@ -96,6 +109,12 @@ async def stream_tts(text, piper_proc, retro_mode, voice_name):
     if piper_proc is None:
         # print("[TTS Warning] partial response skipped (no audio engine)")
         return
+    
+    # Remove anything in square brackets (e.g., [action], [sound effect])
+    import re
+    text = re.sub(r'\[.*?\]', '', text).strip()
+    if not text:
+        return
         
     try:
         piper_proc.stdin.write(text.encode() + b'\n')
@@ -150,8 +169,44 @@ async def process_connection(websocket):
     recognizer = KaldiRecognizer(vosk_model, RATE)
     session_config = None
     piper_proc = None
+    
+    # Attention-seeking state
+    last_interaction_time = time.time()
+    last_attention_time = 0  # Track when we last spoke unprompted
 
-    async for message in websocket:
+    while True:
+        try:
+            # Use timeout to detect silence
+            message = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+        except asyncio.TimeoutError:
+            # No message received - check if we should seek attention
+            if session_config and piper_proc:
+                now = time.time()
+                idle_duration = now - last_interaction_time
+                since_last_attention = now - last_attention_time
+                
+                if idle_duration >= ATTENTION_TIMEOUT and since_last_attention >= ATTENTION_COOLDOWN:
+                    # Time to seek attention!
+                    phrase = random.choice(ATTENTION_PHRASES)
+                    print(f"\033[38;5;214m[Robot]: {phrase}\033[0m")  # Orange color
+                    serial_mgr.send("E:CURIOUS")
+                    
+                    async for chunk in stream_tts(phrase, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):
+                        try:
+                            await websocket.send(chunk)
+                        except websockets.exceptions.ConnectionClosed:
+                            return
+                    
+                    try:
+                        await websocket.send("__END__")
+                    except websockets.exceptions.ConnectionClosed:
+                        return
+                    
+                    last_attention_time = time.time()
+            continue
+        except websockets.exceptions.ConnectionClosed:
+            break
+        
         if isinstance(message, str):
             if message.strip() == "__done__":
                 continue
@@ -189,7 +244,7 @@ async def process_connection(websocket):
                 print("[Server] Unexpected error:", e)
                 continue
 
-            # ignire other strings
+            # ignore other strings
             continue
 
         # only handle audio if bytes
@@ -213,6 +268,9 @@ async def process_connection(websocket):
             # color code the output
             print(f"\033[38;5;35m[User]: {user_text}\033[0m")
             serial_mgr.send("E:LISTENING") # Robot pays attention
+            
+            # Reset idle timer - user is interacting!
+            last_interaction_time = time.time()
 
             messages = [{"role": "system", "content": session_config.get("system_prompt", "")}]
             messages.append({"role": "user", "content": user_text})

@@ -422,11 +422,25 @@ public:
     case LongHappy:
        if (elapsed >= HAPPY_DURATION * 4) { enterDefaultState(); lastActionTime = now; } break;
     case Curiosity:
-      if (elapsed >= CURIOSITY_DURATION) { enterDefaultState(); lastActionTime = now; } break;
+      if (elapsed >= CURIOSITY_DURATION) { 
+        // Biased toward staying playful: 60% Default, 30% Curious again, 10% Sleepy
+        unsigned int curiousChoice = random(1, 11);
+        if (curiousChoice <= 6) {
+          enterDefaultState();  // 60% - back to default (may become curious again)
+        } else if (curiousChoice <= 9) {
+          // 30% - stay curious, just reset timer
+          lastActionTime = now;
+        } else {
+          enterSleepyState();   // 10% - finally getting tired
+        }
+        lastActionTime = now;
+      } 
+      break;
     case Sleepy:
       if (elapsed >= DEEP_SLEEP_DELAY) { enterAsleepState(); lastActionTime = now; } break;
     case Asleep:
-      if (elapsed >= DEEP_SLEEP_DELAY) { enterDefaultState(); lastActionTime = now; } break;
+      // Stay asleep until interaction (touch, speech command, IMU event)
+      break;
     case Excited:
       if (elapsed >= EXCITED_DURATION) { enterDefaultState(); lastActionTime = now; } break;
     case Dizzy:
