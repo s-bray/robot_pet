@@ -37,7 +37,9 @@ private:
 
   static const unsigned long IDLE_DELAY = 5000;
   static const unsigned long LISTENING_TIMEOUT = 15000; // 15s timeout for listening
-  static const unsigned long DEEP_SLEEP_DELAY = 10000;
+  // static const unsigned long DEEP_SLEEP_DELAY = 10000; // Removed constant, now dynamic
+  static const unsigned long SLEEPY_STATE_DURATION = 10000; // Time to stay in Sleepy/Tired state before full sleep
+  unsigned long currentSleepDuration = 120000; // Start at 2 minutes
   static const unsigned long ANGRY_DURATION = 5000;
   static const unsigned long HAPPY_DURATION = 2000; // Increased to 2s to show emotion longer
   static const unsigned long CURIOSITY_DURATION = 3000; // Increased to 3s
@@ -45,7 +47,7 @@ private:
   static const unsigned long SCARED_DURATION = 2000;
   static const unsigned long EXCITED_DURATION = 300;
   static const unsigned long DIZZY_DURATION = 4000;
-  static const unsigned long TOUCHED_DURATION = 300;
+  static const unsigned long TOUCHED_DURATION = 2000;
   static const unsigned long PICKUP_COOLDOWN = 500;
 
   unsigned long lastActionTime;
@@ -206,7 +208,10 @@ private:
     roboEyes.setIdleMode(OFF);
     roboEyes.setBorderradius(0, 0);
     servo.stop(); // No movement when fully asleep
-    Serial.println("CurrentState: Asleep");
+    lastActionTime = millis(); // IMPORTANT: Reset timer when entering sleep to track duration properly
+    Serial.print("CurrentState: Asleep (Duration: ");
+    Serial.print(currentSleepDuration / 1000);
+    Serial.println("s)");
   }
 
   void enterAngryState()
@@ -322,6 +327,9 @@ public:
     servo.move(90, 90);
     servo.stop();
     
+    // Manual interaction resets sleep duration back to 2 minutes
+    currentSleepDuration = 120000; 
+    
     currentEyeState = Default;
     setDefaultState();
     Serial.println("CurrentState: Default");
@@ -365,8 +373,10 @@ public:
     servo.update();
 
     // Check for high priority physical interactions/interrupts
-    // Only check IMU sensors when in non-animated states
-    if (currentEyeState == Default || currentEyeState == Scared || currentEyeState == Scare || currentEyeState == Angry || currentEyeState == Listening || currentEyeState == Curiosity) {
+    // Only check IMU sensors when in non-animated states OR when sleeping (to wake up)
+    if (currentEyeState == Default || currentEyeState == Scared || currentEyeState == Scare || 
+        currentEyeState == Angry || currentEyeState == Listening || currentEyeState == Curiosity ||
+        currentEyeState == Sleepy || currentEyeState == Asleep) {
        if (imu.isShaken()) {
          Serial.println(">>> SHAKEN DETECTED <<<");
           enterDizzyState();
@@ -437,9 +447,19 @@ public:
       } 
       break;
     case Sleepy:
-      if (elapsed >= DEEP_SLEEP_DELAY) { enterAsleepState(); lastActionTime = now; } break;
+      if (elapsed >= SLEEPY_STATE_DURATION) { enterAsleepState(); lastActionTime = now; } break;
     case Asleep:
-      // Stay asleep until interaction (touch, speech command, IMU event)
+      // Wake up if sleep duration has passed
+      if (elapsed >= currentSleepDuration) {
+          // TIME TO WAKE UP NATURALLY
+          enterDefaultState(); 
+          lastActionTime = now;
+          
+          // Progressive Sleep: Add 2 minutes for NEXT time because we woke up naturally (boredom?)
+          currentSleepDuration += 120000; 
+          Serial.print("Woke up naturally. Next sleep duration: ");
+          Serial.println(currentSleepDuration);
+      }
       break;
     case Excited:
       if (elapsed >= EXCITED_DURATION) { enterDefaultState(); lastActionTime = now; } break;
