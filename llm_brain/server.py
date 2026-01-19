@@ -233,15 +233,20 @@ async def process_connection(websocket):
                         emotion = extract_emotion(segment)
                         if emotion:
                              current_emotion = emotion
-                             serial_mgr.send(f"E:{emotion}")
                         elif current_emotion != "DEFAULT":
-                             # Sticky emotion: keep previous if new segment has none
-                             pass 
+                             # Sticky emotion logic
+                             emotion = current_emotion
                         else:
-                             serial_mgr.send("E:DEFAULT")
+                             emotion = "DEFAULT"
 
                         full_response += segment + " "
+                        
+                        sent_emotion = False 
                         async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):    
+                            if not sent_emotion:
+                                if emotion: serial_mgr.send(f"E:{emotion}")
+                                sent_emotion = True
+                                
                             try:
                                 await websocket.send(chunk)
                             except websockets.exceptions.ConnectionClosed:
@@ -256,14 +261,19 @@ async def process_connection(websocket):
                 emotion = extract_emotion(segment)
                 if emotion:
                      current_emotion = emotion
-                     serial_mgr.send(f"E:{emotion}")
                 elif current_emotion != "DEFAULT":
-                     pass
+                     emotion = current_emotion
                 else:
-                     serial_mgr.send("E:DEFAULT")
+                     emotion = "DEFAULT"
 
                 full_response += segment + " "
+                
+                sent_emotion = False
                 async for chunk in stream_tts(segment, piper_proc, session_config.get("retro_voice_fx", False), session_config["voice"]):
+                    if not sent_emotion:
+                        if emotion: serial_mgr.send(f"E:{emotion}")
+                        sent_emotion = True
+                        
                     try:
                         await websocket.send(chunk)
                     except websockets.exceptions.ConnectionClosed:

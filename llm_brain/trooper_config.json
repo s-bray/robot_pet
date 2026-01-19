@@ -1,7 +1,7 @@
 {
   "volume": 95,
   "mic_name": "USB PnP Sound Device",
-  "audio_output_device": "USB PnP Sound Device",
+  "audio_output_device": "bcm2835 Headphones",
   "model_name": "gemma3:1b",
   "voice": "ryan-low.onnx",
   "mute_mic_during_playback": true,
